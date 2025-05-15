@@ -111,11 +111,11 @@ class RunModel:
         elif dataset == 'slap':
             input_folder = dataset_dir / 'slap'
         else:
-            input_folder = dataset_dir / f'{dataset}_s10'
+            input_folder = dataset_dir / f'{dataset}'
             print(input_folder)
 
         if self.save_folder is None:
-            self.save_folder = f'results/{dataset}/{datetime.datetime.now().strftime("%d_%m")}'
+            self.save_folder = f'results_v2/{dataset}/{datetime.datetime.now().strftime("%d_%m")}'
 
         self.read_input(input_folder)
         print('Save to folder:', self.save_folder)
@@ -124,7 +124,6 @@ class RunModel:
     def run_one_model(self, config_fn, model_name):
         self.config = OmegaConf.load(config_fn)
         grid = ParameterGrid(dict(self.config.hp))
-        
 
         for ps in grid:
             param_string = ''.join([f'-{key}{ps[key]}' for key in ps])
@@ -393,7 +392,10 @@ class RunModel:
         if os.path.exists(f'{input_folder}/graph.graphml'):
             networkx_graph = nx.read_graphml(f'{input_folder}/graph.graphml')
             networkx_graph = nx.relabel_nodes(networkx_graph, {str(i): i for i in range(len(networkx_graph))})
-            self.networkx_graph = networkx_graph
+            self.graph = dgl.from_networkx(networkx_graph)
+            self.graph = dgl.remove_self_loop(self.graph)
+            self.graph = dgl.add_self_loop(self.graph)
+            self.graph = self.graph.to(self.device)
         elif os.path.exists(f'{input_folder}/cat_features.txt'):
             # normalize
             encoded_X = BaseModel().encode_cat_features(self.X, self.y, self.cat_features, self.train_mask, 
@@ -422,13 +424,14 @@ class RunModel:
         self.max_seeds = max_seeds
         print(dataset, args, task, repeat_exp, max_seeds, dataset_dir, config_dir)
 
-        dataset_dir = Path(dataset_dir) if dataset_dir else Path(__file__).parent.parent / 'datasets' / 'huggingFace_sd_regression' / dataset
+        dataset_dir = Path(dataset_dir) if dataset_dir else Path(__file__).parent.parent / 'datasets' / 'huggingFace_sd' / dataset
+        # dataset_dir = Path(dataset_dir) if dataset_dir else Path(__file__).parent.parent / 'datasets'
         config_dir = Path(config_dir) if config_dir else Path(__file__).parent.parent / 'configs' / 'model'
         print(dataset_dir, config_dir)
 
         self.task = task
         self.save_folder = save_folder
-        # self.save_folder = Path('./results/huggingFace_sd_regression') / dataset / f'{dataset}_s10' / save_folder
+        # self.save_folder = Path('./results/huggingFace_sd') / dataset / f'{dataset}_s10' / save_folder
         self.get_input(dataset_dir, dataset)
 
         self.seed_results = dict()
@@ -447,29 +450,28 @@ class RunModel:
             self.store_results = dict()
             for arg in args:
                 if arg == 'all':
-                    # # self.run_one_model(config_fn=config_dir / 'mlp.yaml', model_name="mlp")
+                    # self.run_one_model(config_fn=config_dir / 'mlp.yaml', model_name="mlp")
                     self.run_one_model(config_fn=config_dir / 'bgnn.yaml', model_name="bgnn")
                     self.run_one_model(config_fn=config_dir / 'bgnn_v2.yaml', model_name="bgnn_v2")
                     self.run_one_model(config_fn=config_dir / 'resgnn.yaml', model_name="resgnn")
                     self.run_one_model(config_fn=config_dir / 'resgnn_LI.yaml', model_name="resgnn_LI")
                     # self.run_one_model(config_fn=config_dir / 'resgnnL.yaml', model_name="resgnnL")
-                    self.run_one_model(config_fn=config_dir / 'resgnnXG.yaml', model_name="resgnnXG")
+                    # self.run_one_model(config_fn=config_dir / 'resgnnXG.yaml', model_name="resgnnXG")
                     self.run_one_model(config_fn=config_dir / 'emb-GBDT.yaml', model_name="emb-GBDT")
                     self.run_one_model(config_fn=config_dir / 'catboost.yaml', model_name="catboost")
-                    self.run_one_model(config_fn=config_dir / 'ExcelFormer.yaml', model_name='ExcelFormer')
-                    self.run_one_model(config_fn=config_dir / 'trompt.yaml', model_name='trompt')
-                    self.run_one_model(config_fn=config_dir / 'tabnet.yaml', model_name='tabnet')
-                    self.run_one_model(config_fn=config_dir / 'tabtransformer.yaml', model_name='tabtransformer')
-                    self.run_one_model(config_fn=config_dir / 'fttransformer.yaml', model_name='fttransformer')
-                    # self.run_one_model(config_fn=config_dir / 'aggBGNN.yaml', model_name="aggBGNN")
-                    # self.run_one_model(config_fn=config_dir / 'aggBGNN_dnf.yaml', model_name="aggBGNN_dnf")
-                    # self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_dg")
-                    # self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_v2")
-
-                    # self.run_one_model(config_fn=config_dir / 'gnn.yaml', model_name="gnn")
-                    # self.run_one_model(config_fn=config_dir / 'xgboost.yaml', model_name="xgboost")
-                    # self.run_one_model(config_fn=config_dir / 'lightgbm.yaml', model_name="lightgbm")
+                    # self.run_one_model(config_fn=config_dir / 'ExcelFormer.yaml', model_name='ExcelFormer')
+                    # self.run_one_model(config_fn=config_dir / 'trompt.yaml', model_name='trompt')
+                    # self.run_one_model(config_fn=config_dir / 'tabnet.yaml', model_name='tabnet')
+                    # self.run_one_model(config_fn=config_dir / 'tabtransformer.yaml', model_name='tabtransformer')
+                    # self.run_one_model(config_fn=config_dir / 'fttransformer.yaml', model_name='fttransformer')
+                    self.run_one_model(config_fn=config_dir / 'gnn.yaml', model_name="gnn")
+                    self.run_one_model(config_fn=config_dir / 'xgboost.yaml', model_name="xgboost")
+                    self.run_one_model(config_fn=config_dir / 'lightgbm.yaml', model_name="lightgbm")
                     # self.run_one_model(config_fn=config_dir / 'RandomForest.yaml', model_name="RandomForest")
+                    self.run_one_model(config_fn=config_dir / 'aggBGNN.yaml', model_name="aggBGNN")
+                    self.run_one_model(config_fn=config_dir / 'aggBGNN_dnf.yaml', model_name="aggBGNN_dnf")
+                    # self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_dg")
+                    self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_v2")
                     break
                 elif arg == 'catboost':
                     self.run_one_model(config_fn=config_dir / 'catboost.yaml', model_name="catboost")
@@ -504,10 +506,10 @@ class RunModel:
                     self.run_one_model(config_fn=config_dir / 'tabtransformer.yaml', model_name='tabtransformer')
                     self.run_one_model(config_fn=config_dir / 'fttransformer.yaml', model_name='fttransformer')
                 elif arg == 'aggBGNN':
-                    # self.run_one_model(config_fn=config_dir / 'aggBGNN.yaml', model_name="aggBGNN")
+                    self.run_one_model(config_fn=config_dir / 'aggBGNN.yaml', model_name="aggBGNN")
                     self.run_one_model(config_fn=config_dir / 'aggBGNN_dnf.yaml', model_name="aggBGNN_dnf")
                     self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_dg")
-                    self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_v2")
+                    # self.run_one_model(config_fn=config_dir / 'aggBGNN_dg.yaml', model_name="aggBGNN_v2")
                 elif arg == 'aggBGNN_dnf':
                     self.run_one_model(config_fn=config_dir / 'aggBGNN_dnf.yaml', model_name="aggBGNN_dnf")
                 elif arg == 'aggBGNN_dg':
@@ -539,12 +541,12 @@ class RunModel:
 if __name__ == '__main__':
     fire.Fire(RunModel().run) 
 
-    # sd_path = Path(__file__).parent.parent / 'datasets' / 'huggingFace_sd_regression'
+    # sd_path = Path(__file__).parent.parent / 'datasets' / 'huggingFace_sd'
     # datasets_ls = [dir for dir in os.listdir(sd_path) if os.path.isdir(os.path.join(sd_path, dir))]
     # datasets_ls = sorted(datasets_ls)
-    # print(datasets_ls)
+    # print(len(datasets_ls))
 
     # for dataset in datasets_ls:
-    #     RunModel().run(dataset, "aggBGNN",
+    #     RunModel().run(dataset, "aggBGNN_v2",
     #                    save_folder="aggBGNN",
-    #                    task="regression")
+    #                    task="classification")
