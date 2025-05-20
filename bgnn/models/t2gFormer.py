@@ -152,7 +152,7 @@ class t2gFormer(BaseModel):
             if self.task == "regression":
                 loss = torch.sqrt(F.mse_loss(pred.view(-1), y.view(-1)))
             elif self.task == "classification":
-                loss = F.cross_entropy(pred, y)
+                loss = F.binary_cross_entropy_with_logits(pred, y)
             else:
                 raise NotImplemented("Unknown task. Supported tasks: classification, regression.")
             
@@ -241,8 +241,6 @@ class t2gFormer(BaseModel):
             
         }
 
-        print("kwargs:", kwargs)
-
         # model initialization
         self.model = T2GFormer(**kwargs).to(self.device)
 
@@ -265,7 +263,7 @@ class t2gFormer(BaseModel):
             0.0
         )
 
-        n_epochs = 10000
+        # n_epochs = 10000
         # report_frequency = len(ys['train']) // batch_size // 3
         # print(len(ys["train"]))
         # print("report frequency:", report_frequency)
@@ -279,7 +277,7 @@ class t2gFormer(BaseModel):
         best_val_epoch = 0
         epochs_since_last_best_metric = 0
 
-        pbar = tqdm(range(n_epochs))
+        pbar = tqdm(range(num_epochs))
         for epoch in pbar:
             start2epoch = time.time()
             
@@ -300,6 +298,7 @@ class t2gFormer(BaseModel):
                     print(" >>> Froze FR-Graph topology")
 
                     epochs_since_last_best_metric = 0  # reset early stopping
+                    continue
                 break
         
         # if loss_fn:

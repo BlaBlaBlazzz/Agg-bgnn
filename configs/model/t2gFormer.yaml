@@ -2,6 +2,11 @@ hp:
   layers:
   - 1
   - 2
+  d_token:
+  - 96
+  - 192
+  - 288
+  - 384
   lr:
   - 0.0003
   - 0.0001
@@ -15,6 +20,6 @@ hp:
   - 0.3
   - 0.5
 
-eval_batch_size: 8192
+
 num_epochs: 100
 patience: 20
